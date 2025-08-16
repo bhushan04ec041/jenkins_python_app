@@ -4,6 +4,7 @@ WORKDIR /usr/src/app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
+COPY wait-for-it.sh /wait-for-it.sh
 RUN chmod +x wait-for-it.sh
 ENV FLASK_APP=app.py
 CMD ["sh", "wait-for-it.sh", "postgres", "5432", "flask", "run", "--host=0.0.0.0"]
