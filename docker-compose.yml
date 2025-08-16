@@ -6,14 +6,17 @@ services:
     image: flask-redis-app:latest
     container_name: flask_app
     environment:
-      - FLASK_DEBUG=1
+      FLASK_DEBUG: 1
+      DATABASE_URL: postgresql://myuser:mypassword@postgres:5432/mydatabase
+      REDIS_URL: redis://redis:6379/0
     ports:
       - "5001:5001"
-    volumes:
-      - .:/usr/src/app
+    depends_on:
+      - postgres
+      - redis
     networks:
-      - mynet   # ✅ connect to same network
+      - mynet
 
 networks:
   mynet:
-    external: true   # ✅ attach to existing network
+    external: true
