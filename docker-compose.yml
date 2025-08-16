@@ -14,8 +14,8 @@ services:
       - postgres
     volumes:
       #- .:/usr/src/app
-      - ./app.py:/usr/src/app/app.py
-      - ./requirements.txt:/usr/src/app/requirements.txt
+      - ./app.py:/usr/src/app/app.py:ro
+      - ./requirements.txt:/usr/src/app/requirements.txt:ro
 
 
   redis:
