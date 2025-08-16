@@ -1,10 +1,9 @@
-version: "3"
+version: "3.8"
 
 services:
   app:
-    #build: .
-    image: bhushan04ec041/jenkins_python_app:v1.0.0 
-    #image: takacsmark/flask-redis:1.1
+    build: .
+    image: flask-redis-app:latest
     environment:
       - FLASK_DEBUG=1
     ports:
@@ -13,23 +12,10 @@ services:
       - redis
       - postgres
     volumes:
-      #- .:/usr/src/app
-      - ./app.py:/usr/src/app/app.py:ro
-      - ./requirements.txt:/usr/src/app/requirements.txt:ro
+      - .:/usr/src/app
+    networks:
+      - mynet
 
-
-  redis:
-    image: redis:4.0.11-alpine
-
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: mydatabase
-      POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: mypassword
-    ports:
-      - "5432:5432"
-    volumes:
-      - ./postgres/data:/var/lib/postgresql/data
-      - ./postgres/log:/var/log
-      - ./postgres/init:/docker-entrypoint-initdb.d
+networks:
+  mynet:
+    driver: bridge
