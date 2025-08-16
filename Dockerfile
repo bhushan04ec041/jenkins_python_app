@@ -24,5 +24,5 @@ ENV FLASK_APP=app.py
 ENV FLASK_RUN_PORT=5001
 
 # Run the Flask app
-#CMD ["flask", "run", "--host=0.0.0.0", "--port=5001"]
-CMD ["sh", "wait-for-it.sh", "postgres", "5432", "flask", "run", "--host=0.0.0.0", "--port=5001"]
+CMD ["flask", "run", "--host=0.0.0.0", "--port=5001"]
+#CMD ["sh", "wait-for-it.sh", "postgres", "5432", "flask", "run", "--host=0.0.0.0", "--port=5001"]
