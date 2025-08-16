@@ -4,6 +4,7 @@ services:
   app:
     build: .
     image: flask-redis-app:latest
+    container_name: flask_app
     environment:
       - FLASK_DEBUG=1
     ports:
@@ -11,8 +12,8 @@ services:
     volumes:
       - .:/usr/src/app
     networks:
-      - mynet
+      - mynet   # ✅ connect to same network
 
 networks:
   mynet:
-    driver: bridge
+    external: true   # ✅ attach to existing network
