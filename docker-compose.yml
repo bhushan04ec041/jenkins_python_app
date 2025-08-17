@@ -1,21 +1,21 @@
-version: "3.8"
+version: "3.9"
 
 services:
-  app:
-    build: .
-    image: flask-redis-app:latest
+  flask_app:
+    image: bhushan04ec041/jenkins_python_app:v1.0.2
     container_name: flask_app
-    environment:
-      FLASK_DEBUG: 1
-      DATABASE_URL: postgresql://myuser:mypassword@postgres:5432/mydatabase
-      REDIS_URL: redis://redis:6379/0
+    restart: unless-stopped
     ports:
       - "5001:5001"
-    depends_on:
-      - postgres
-      - redis
     networks:
       - mynet
+    environment:
+      # Optional: Add env vars if your app.py reads from env
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: mydatabase
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      REDIS_HOST: redis
 
 networks:
   mynet:
