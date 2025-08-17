@@ -24,7 +24,7 @@ form_html = """
     <title>Employee Submission Profinch</title>
 </head>
 <body>
-    <h2>Enter Employee Data</h2>
+    <h2>Enter Employee Data for profinch</h2>
     <form method="POST">
         ID: <input type="number" name="id" required><br>
         Name: <input type="text" name="name" required><br>
