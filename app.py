@@ -58,3 +58,7 @@ def index():
     employees = cursor.fetchall()
 
     return render_template_string(form_html, employees=employees)
+
+# This is crucial: keeps Flask running
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5001)
