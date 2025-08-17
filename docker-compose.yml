@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   flask_app:
-    image: bhushan04ec041/jenkins_python_app:v1.0.2
+    image: bhushan04ec041/jenkins_python_app:v1.0.1
     container_name: flask_app
     restart: unless-stopped
     ports:
