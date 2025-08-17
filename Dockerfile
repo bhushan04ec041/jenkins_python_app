@@ -1,28 +1,16 @@
-FROM python:3.7.0-alpine3.8
+# --- Stage 1: Base Image ---
+FROM python:3.10-slim
 
-# Install build dependencies
-RUN apk update && apk add --no-cache \
-    gcc \
-    musl-dev \
-    postgresql-dev \
-    libffi-dev \
-    python3-dev \
-    build-base
+WORKDIR /app
 
-# Set working directory
-WORKDIR /usr/src/app
+# Install system dependencies if needed (psycopg2 etc.)
+RUN apt-get update && apt-get install -y build-essential libpq-dev gcc && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY requirements.txt ./
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
 COPY . .
 
-# Set environment variables
-ENV FLASK_APP=app.py
-ENV FLASK_RUN_PORT=5001
+EXPOSE 8000
 
-# Run the Flask app
-CMD ["flask", "run", "--host=0.0.0.0", "--port=5001"]
-#CMD ["sh", "wait-for-it.sh", "postgres", "5432", "flask", "run", "--host=0.0.0.0", "--port=5001"]
+CMD ["python", "app.py"]
