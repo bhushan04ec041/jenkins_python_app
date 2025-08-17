@@ -21,7 +21,7 @@ form_html = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Employee Submission</title>
+    <title>Employee Submission Profinch</title>
 </head>
 <body>
     <h2>Enter Employee Data</h2>
