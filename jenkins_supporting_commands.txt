@@ -1,0 +1,168 @@
+Commands to work with the local registry:2
+
+# to list the images hold by the registry:2
+	curl http://localhost:5000/v2/_catalog
+# list the tags available with the image bhushan
+	curl http://localhost:5000/v2/jenkins_python_app/tags/list
+
+
+delete the image in the registry:
+curl -I http://localhost:5000/v2/bhushan/manifests/1.1.0 -H "Accept: application/vnd.docker.distribution.manifest.v2+json"
+curl -X DELETE http://localhost:5000/v2/bhushan/manifests/<sha256:abc123... add that sha from the above command>
+docker exec -it registry bin/registry garbage-collect /etc/docker/registry/config.yml 	>>	Even after deletion, the image blobs still exist until you run garbage collection
+
+curl http://localhost:5000/v2/_catalog
+
+docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Networks}}"
+
+docker search jenkins
+
+
+
+dos2unix start.sh
+dos2unix wait-for-it.sh
+git config --global core.autocrlf input
+
+
+
+version: '3.8'
+
+
+services:
+  jenkins:
+    image: jenkins/jenkins:2.440.1-lts
+    container_name: jenkins
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - ./jenkins_data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+volumes:
+  jenkins_data:
+
+
+
+945725dc15854411bcdc859335f792f7
+
+
+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
+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
+
+
+
+-------- install docker plugins to jenkins ---------
+1. Install Required Plugins
+1. Verify Installed Plugins
+Go to Manage Jenkins → Installed Plugins and check if you see:
+✅ Docker Pipeline (CloudBees)
+✅ Docker API for Pipeline
+✅ Docker Commons
+✅ Docker plugin
+✅ Pipeline Utility Steps
+
+git config --global core.autocrlf false
+git rm --cached -r .
+git reset
+
+git fetch origin
+git checkout BR_bhushan
+git fetch origin BR_bhushan
+
+git add .
+git commit -m "Updated code for v1.0.4"
+git push origin BR_bhushan
+git checkout BR_bhushan
+git tag v1.0.0
+git push origin v1.0.0
+
+git fetch --tags
+git tag
+
+---------------------------
+2️⃣ Add GitHub Credentials to Jenkins:
+- Go to Jenkins Dashboard → Manage Jenkins
+- Click Credentials → (select your domain, usually (global))
+- Click Add Credentials
+- Choose:
+- Kind: Username with password
+- Username: your GitHub username
+- Password: paste the PAT you just created
+- ID: give it a name like github-pat
+- Click OK
+
+
+stage('Checkout') {
+    steps {
+        git branch: "${BRANCH}", credentialsId: 'github-pat', url: 'https://github.com/bhushan04ec041/jenkins_python_app.git'
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+------------to delete the workspace : /var/jenkins_home/workspace/python_app on built-in -------
+settings >> script console >> edit and run >>
+
+import jenkins.model.*
+import org.jenkinsci.plugins.workflow.job.WorkflowJob
+
+def job = Jenkins.instance.getItemByFullName("python_app")
+def workspacePath = Jenkins.instance.getWorkspaceFor(job)
+
+if (workspacePath?.exists()) {
+    println "Deleting workspace at: ${workspacePath}"
+    workspacePath.deleteRecursive()
+} else {
+    println "Workspace not found or already deleted."
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
