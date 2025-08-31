@@ -27,7 +27,6 @@ git config --global core.autocrlf input
 
 version: '3.8'
 
-
 services:
   jenkins:
     image: jenkins/jenkins:2.440.1-lts
@@ -103,20 +102,6 @@ stage('Checkout') {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ------------to delete the workspace : /var/jenkins_home/workspace/python_app on built-in -------
 settings >> script console >> edit and run >>
 
@@ -135,15 +120,7 @@ if (workspacePath?.exists()) {
 
 
 
-
-
-
-
-
-
-
-
-
+#####################################################################################
 
 
 
