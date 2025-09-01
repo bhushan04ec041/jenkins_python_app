@@ -2,44 +2,50 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "bhushan04ec041/jenkins_python_app"
-        IMAGE_TAG  = "${BUILD_NUMBER}"
+        DOCKER_IMAGE = "ghcr.io/bhushan04ec041/jenkins_python_app"
+        DOCKER_CREDS = "github-pat"
+        GITHUB_CREDS = "github-pat"
     }
 
     stages {
-        stage('Build Docker Image') {
+        stage('Checkout Code') {
             steps {
-                echo "🛠 Building Docker image $IMAGE_NAME:$IMAGE_TAG..."
-                sh "docker build -t $IMAGE_NAME:$IMAGE_TAG ."
+                git branch: 'BR_bhushan',
+                    credentialsId: "${GITHUB_CREDS}",
+                    url: 'https://github.com/bhushan04ec041/jenkins_python_app.git'
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Build Docker Image') {
             steps {
-                echo "🚀 Logging in and pushing Docker image..."
-                withCredentials([usernamePassword(
-                    credentialsId: 'docker-hub-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh """
-                        echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
-                        docker push $IMAGE_NAME:$IMAGE_TAG
-                        docker tag $IMAGE_NAME:$IMAGE_TAG $IMAGE_NAME:latest
-                        docker push $IMAGE_NAME:latest
-                    """
+                script {
+                    docker.build("${DOCKER_IMAGE}:${BUILD_NUMBER}")
+                }
+            }
+        }
+
+        stage('Push to GitHub Container Registry') {
+            steps {
+                script {
+                    docker.withRegistry('https://ghcr.io', "${DOCKER_CREDS}") {
+                        docker.image("${DOCKER_IMAGE}:${BUILD_NUMBER}").push()
+                        docker.image("${DOCKER_IMAGE}:${BUILD_NUMBER}").push("latest")
+                    }
                 }
             }
         }
     }
 
     post {
-        success {
-            echo "✅ CI pipeline successful. Triggering CD pipeline..."
-            build job: 'python_app_CD', wait: false
+        always {
+            echo "Cleaning workspace..."
+            cleanWs()
         }
         failure {
-            echo "❌ CI pipeline failed."
+            echo "❌ Pipeline failed"
+        }
+        success {
+            echo "✅ Image pushed to GHCR successfully"
         }
     }
 }
