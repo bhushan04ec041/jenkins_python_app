@@ -1,11 +1,6 @@
 pipeline {
     agent any
 
-    // Trigger pipeline automatically on GitHub push events
-    triggers {
-        githubPush()
-    }
-
     environment {
         IMAGE_NAME = "bhushan04ec041/jenkins_python_app"
         IMAGE_TAG  = "${BUILD_NUMBER}"   // unique tag per build
@@ -14,17 +9,13 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                echo "🔄 Checking out branch BR_bhushan and tags from GitHub..."
+                echo "🔄 Checking out branch BR_bhushan from GitHub..."
                 checkout([
                     $class: 'GitSCM',
-                    branches: [
-                        [name: '*/BR_bhushan'],  // branch trigger
-                        [name: 'refs/tags/*']    // tag trigger
-                    ],
+                    branches: [[name: '*/BR_bhushan']],  // only branch
                     doGenerateSubmoduleConfigurations: false,
                     extensions: [
-                        [$class: 'CloneOption', noTags: false, shallow: false, depth: 0],
-                        [$class: 'DisableRemotePoll']   // disables lightweight checkout
+                        [$class: 'CloneOption', noTags: false, shallow: false, depth: 0]
                     ],
                     userRemoteConfigs: [[
                         url: 'https://github.com/bhushan04ec041/jenkins_python_app.git',
@@ -72,3 +63,4 @@ pipeline {
         }
     }
 }
+
