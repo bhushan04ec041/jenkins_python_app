@@ -3,34 +3,14 @@ pipeline {
 
     environment {
         IMAGE_NAME = "bhushan04ec041/jenkins_python_app"
-        IMAGE_TAG  = "${BUILD_NUMBER}"   // unique tag per build
+        IMAGE_TAG  = "${BUILD_NUMBER}"
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                echo "🔄 Checking out branch BR_bhushan from GitHub..."
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: '*/BR_bhushan']],  // only branch
-                    doGenerateSubmoduleConfigurations: false,
-                    extensions: [
-                        [$class: 'CloneOption', noTags: false, shallow: false, depth: 0]
-                    ],
-                    userRemoteConfigs: [[
-                        url: 'https://github.com/bhushan04ec041/jenkins_python_app.git',
-                        credentialsId: 'github-pat'
-                    ]]
-                ])
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
                 echo "🛠 Building Docker image $IMAGE_NAME:$IMAGE_TAG..."
-                sh """
-                    docker build -t $IMAGE_NAME:$IMAGE_TAG .
-                """
+                sh "docker build -t $IMAGE_NAME:$IMAGE_TAG ."
             }
         }
 
