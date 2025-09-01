@@ -1,7 +1,7 @@
 pipeline {
     agent any
 
-    // Trigger pipeline automatically on GitHub push
+    // Trigger pipeline automatically on GitHub push events
     triggers {
         githubPush()
     }
@@ -14,12 +14,18 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                echo "🔄 Checking out branch BR_bhushan from GitHub..."
+                echo "🔄 Checking out branch BR_bhushan and tags from GitHub..."
                 checkout([
                     $class: 'GitSCM',
-                    branches: [[name: '*/BR_bhushan']],
+                    branches: [
+                        [name: '*/BR_bhushan'],  // branch trigger
+                        [name: 'refs/tags/*']    // tag trigger
+                    ],
                     doGenerateSubmoduleConfigurations: false,
-                    extensions: [],
+                    extensions: [
+                        [$class: 'CloneOption', noTags: false, shallow: false, depth: 0],
+                        [$class: 'DisableRemotePoll']   // disables lightweight checkout
+                    ],
                     userRemoteConfigs: [[
                         url: 'https://github.com/bhushan04ec041/jenkins_python_app.git',
                         credentialsId: 'github-pat'
@@ -40,9 +46,11 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 echo "🚀 Logging in and pushing Docker image..."
-                withCredentials([usernamePassword(credentialsId: 'docker-hub-creds',
-                                                  usernameVariable: 'DOCKER_USER',
-                                                  passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([usernamePassword(
+                    credentialsId: 'docker-hub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
                     sh """
                         echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
                         docker push $IMAGE_NAME:$IMAGE_TAG
@@ -64,4 +72,3 @@ pipeline {
         }
     }
 }
-
