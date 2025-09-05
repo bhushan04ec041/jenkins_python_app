@@ -1,0 +1,173 @@
+Prerequisits:
+create the token from gitlab.
+Push the complete code provided to your branch and use the below command to commit and provide the tag.
+check the tag is availabe on the github or not.
+
+
+git config --global core.autocrlf false
+
+git fetch origin
+git checkout BR_bhushan
+git fetch origin BR_bhushan
+
+git add .
+git commit -m "Updated code for v1.0.4"
+git push origin BR_bhushan
+git checkout BR_bhushan
+git tag v1.0.0
+git push origin v1.0.0
+
+git fetch --tags
+git tag
+
+once the code is available in your branch then process or the next 
+
+
+########################	CI Pipeline	########################
+In jenkins got to settings >> credentials >> create the credentials with the proper ID for the github and gitlab.
+
+Open jenkins >> New Item >> Enter an item name >> piepline >> OK >> scroll down and use the below code:
+
+NOTE: change the environment variables used in the pipeline along with the credentials ID as per your environment:
+
+
+########################
+pipeline {
+    agent any
+
+    environment {
+        DOCKERHUB_USER = 'bhushan04ec041'   // ✅ Corrected
+        IMAGE_NAME = 'jenkins_python_app'
+        BRANCH_NAME = 'BR_bhushan'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: "${BRANCH_NAME}", 
+                    url: 'https://github.com/bhushan04ec041/jenkins_python_app.git',
+                    credentialsId: 'github-pat'
+            }
+        }
+
+        stage('Get Git Tag or Branch') {
+            steps {
+                script {
+                    def gitTag = sh(script: "git describe --tags --exact-match || true", returnStdout: true).trim()
+                    if (!gitTag) {
+                        gitTag = sh(script: "git describe --tags `git rev-list --tags --max-count=1` || true", returnStdout: true).trim()
+                    }
+                    if (!gitTag) {
+                        gitTag = BRANCH_NAME
+                    }
+                    echo "✅ Using tag/branch: ${gitTag}"
+                    env.IMAGE_TAG = gitTag
+                }
+            }
+        }
+
+        stage('Build & Push Docker Image') {
+            steps {
+                script {
+                    def imageFullName = "${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}"
+
+                    sh """
+                        echo "🚀 Building image with tag: ${imageFullName}"
+                        docker build -t ${imageFullName} .
+                    """
+
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub-creds',
+                                                      usernameVariable: 'DOCKER_USER',
+                                                      passwordVariable: 'DOCKER_PASS')]) {
+                        sh """
+                            echo "${DOCKER_PASS}" | docker login -u "${DOCKER_USER}" --password-stdin
+                            docker push ${imageFullName}
+                            docker logout
+                        """
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+########################	CD Pipeline	########################
+
+pipeline {
+    agent any
+    environment {
+        DOCKER_IMAGE = "bhushan04ec041/jenkins_python_app"
+        COMPOSE_FILE = "docker-compose.yml"
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                // Use the PAT credential stored in Jenkins
+                git branch: 'BR_bhushan', url: 'https://github.com/bhushan04ec041/jenkins_python_app.git', credentialsId: 'github-pat'
+            }
+        }
+
+        stage('Get Latest Docker Image Tag') {
+            steps {
+                script {
+                    def response = sh(
+                        script: "curl -s https://registry.hub.docker.com/v2/repositories/${DOCKER_IMAGE}/tags?page_size=1",
+                        returnStdout: true
+                    ).trim()
+                    def json = new groovy.json.JsonSlurper().parseText(response)
+                    env.LATEST_TAG = json.results[0].name
+                    echo "Latest Docker image tag: ${env.LATEST_TAG}"
+                }
+            }
+        }
+
+        stage('Update docker-compose.yml') {
+            steps {
+                script {
+                    echo "Updating docker-compose.yml with tag: ${env.LATEST_TAG}"
+                    sh """
+                    sed -i 's|image: ${DOCKER_IMAGE}:.*|image: ${DOCKER_IMAGE}:${LATEST_TAG}|' ${COMPOSE_FILE}
+                    """
+                }
+            }
+        }
+		stage('Deploy with Docker Compose') {
+			steps {
+				sh """
+				docker rm -f flask_app || true
+				docker-compose -f ${COMPOSE_FILE} down
+				docker-compose -f ${COMPOSE_FILE} up -d
+				"""
+			}
+		}		
+		
+    }
+    post {
+        failure {
+            echo "Deployment failed!"
+        }
+        success {
+            echo "Deployment completed successfully!"
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
