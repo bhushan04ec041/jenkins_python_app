@@ -52,7 +52,6 @@ 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
 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
 
 
-
 -------- install docker plugins to jenkins ---------
 1. Install Required Plugins
 1. Verify Installed Plugins
