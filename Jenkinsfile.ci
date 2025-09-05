@@ -1,0 +1,63 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKERHUB_USER = 'bhushan04ec041'   // ✅ Corrected
+        IMAGE_NAME = 'jenkins_python_app'
+        BRANCH_NAME = 'BR_bhushan'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: "${BRANCH_NAME}", 
+                    url: 'https://github.com/bhushan04ec041/jenkins_python_app.git',
+                    credentialsId: 'github-pat'
+            }
+        }
+
+        stage('Get Git Tag or Branch') {
+            steps {
+                script {
+                    def gitTag = sh(script: "git describe --tags --exact-match || true", returnStdout: true).trim()
+                    if (!gitTag) {
+                        gitTag = sh(script: "git describe --tags `git rev-list --tags --max-count=1` || true", returnStdout: true).trim()
+                    }
+                    if (!gitTag) {
+                        gitTag = BRANCH_NAME
+                    }
+                    echo "✅ Using tag/branch: ${gitTag}"
+                    env.IMAGE_TAG = gitTag
+                }
+            }
+        }
+
+        stage('Build & Push Docker Image') {
+            steps {
+                script {
+                    def imageFullName = "${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}"
+
+                    sh """
+                        echo "🚀 Building image with tag: ${imageFullName}"
+                        docker build -t ${imageFullName} .
+                    """
+
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub-creds',
+                                                      usernameVariable: 'DOCKER_USER',
+                                                      passwordVariable: 'DOCKER_PASS')]) {
+                        sh """
+                            echo "${DOCKER_PASS}" | docker login -u "${DOCKER_USER}" --password-stdin
+                            docker push ${imageFullName}
+                            docker logout
+                        """
+                    }
+                }
+            }
+        }
+    }
+ post {
+     success {
+         build job: 'CD_python_app', wait: false
+     }
+ }
+}
