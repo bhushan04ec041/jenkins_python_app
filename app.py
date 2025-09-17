@@ -46,11 +46,14 @@ def index():
         emp_id = request.form['id']
         name = request.form['name']
 
-        # Save to Redis
+        # ❌ BUG: Misuse of variable (should be emp_id, not empid)
+        empid = emp_id + "123"  # This will raise TypeError if emp_id is int
+
+        # ⚠️ CODE SMELL: Hardcoded Redis key and poor naming
         redis.rpush('employees', f"{emp_id}:{name}")
 
-        # Save to PostgreSQL
-        cursor.execute("INSERT INTO empdata (id, name) VALUES (%s, %s)", (emp_id, name))
+        # 🔐 VULNERABILITY: SQL injection risk due to string formatting
+        cursor.execute(f"INSERT INTO empdata (id, name) VALUES ({emp_id}, '{name}')")
         conn.commit()
 
     # Get all employees from PostgreSQL
