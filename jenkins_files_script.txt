@@ -1,0 +1,125 @@
+######################################################################################################################################
+image without the docker-compose
+
+FROM jenkins/jenkins:jdk21
+
+USER root
+
+# Install Docker CLI
+RUN apt-get update && \
+    apt-get install -y docker.io && \
+    apt-get clean
+
+# Add jenkins user to docker group
+RUN groupadd docker || true && \
+    usermod -aG docker jenkins
+
+USER jenkins
+
+######################################################################################################################################
+pipeline script for download the code from the BR_bhushan and create the image and push to the local registry.
+
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "jenkins_python_app"
+        REGISTRY = "localhost:5000"
+        BRANCH = "BR_bhushan"
+        FULL_IMAGE_NAME = "${REGISTRY}/${IMAGE_NAME}"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: "${BRANCH}", credentialsId: 'github-pat', url: 'https://github.com/bhushan04ec041/jenkins_python_app.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t ${IMAGE_NAME} ."
+            }
+        }
+
+        stage('Tag & Push to Local Registry') {
+            steps {
+                sh """
+                    docker tag ${IMAGE_NAME} ${FULL_IMAGE_NAME}
+                    docker push ${FULL_IMAGE_NAME}
+                """
+            }
+        }
+    }
+}
+
+######################################################################################################################################
+pipeline script for download the code from the BR_bhushan and create the image and push to the local registry.
+added the version specific image creation and push to docker hub
+
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "jenkins_python_app"
+        DOCKER_HUB_USER = "bhushan04ec041"
+        BRANCH = "BR_bhushan"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: "${BRANCH}", credentialsId: 'github-pat', url: 'https://github.com/bhushan04ec041/jenkins_python_app.git'
+            }
+        }
+
+        stage('Get Git Tag or Commit') {
+            steps {
+                script {
+                    def tag = sh(script: "git describe --tags --abbrev=0 || git rev-parse --short HEAD", returnStdout: true).trim()
+                    env.IMAGE_TAG = tag
+                    env.FULL_IMAGE_NAME = "${DOCKER_HUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}"
+                }
+            }
+        }
+
+        stage('Docker Login') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh "echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin"
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t ${FULL_IMAGE_NAME} ."
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                sh "docker push ${FULL_IMAGE_NAME}"
+            }
+        }
+    }
+}
+
+
+######################################################################################################################################
+pipeline script for download the code from the BR_bhushan and create the image and push to the local registry.
+added the version specific image creation and push to docker hub
+added CD to local desktop directory.
+
+withCredentials([usernamePassword(credentialsId: 'github-pat', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+    sh """
+        if [ ! -d "/host_desktop/jenkins_python_app" ]; then
+            mkdir -p "/host_desktop/jenkins_python_app"
+        fi
+        git clone --branch ${BRANCH} https://${GIT_USER}:${GIT_TOKEN}@github.com/bhushan04ec041/jenkins_python_app.git /host_desktop/jenkins_python_app
+        cd /host_desktop/jenkins_python_app
+        docker-compose up -d
+    """
+}
+
+
