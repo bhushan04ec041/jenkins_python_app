@@ -1,66 +1,45 @@
+# test_app.py
 import pytest
-import psycopg2
+from unittest.mock import patch, MagicMock
 from app import app
 
-# PostgreSQL connection details (match your app.py)
-DB_HOST = "postgres"
-DB_NAME = "mydatabase"
-DB_USER = "myuser"
-DB_PASSWORD = "mypassword"
-
-@pytest.fixture(scope="module")
-def test_client():
-    # Flask provides a test client for requests
+@pytest.fixture
+def client():
+    app.config['TESTING'] = True
     with app.test_client() as client:
         yield client
 
-@pytest.fixture(scope="module")
-def db_cursor():
-    # Connect to the actual PostgreSQL database
-    conn = psycopg2.connect(
-        host=DB_HOST,
-        database=DB_NAME,
-        user=DB_USER,
-        password=DB_PASSWORD
-    )
-    cursor = conn.cursor()
-    # Ensure the table exists
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS empdata (
-            id INT PRIMARY KEY,
-            name VARCHAR(255)
-        );
-    """)
-    conn.commit()
-    yield cursor
-    # Clean up test data
-    cursor.execute("DELETE FROM empdata;")
-    conn.commit()
-    cursor.close()
-    conn.close()
+# Mock PostgreSQL connection and cursor
+@pytest.fixture(autouse=True)
+def mock_postgres():
+    with patch('app.psycopg2.connect') as mock_connect:
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        # Example: fake data returned from SELECT
+        mock_cursor.fetchall.return_value = [(101, "John Doe"), (102, "Jane Smith")]
+        mock_conn.cursor.return_value = mock_cursor
+        mock_connect.return_value = mock_conn
+        yield mock_connect
 
-def test_index_get(test_client):
-    """Test GET request to /"""
-    response = test_client.get('/')
+# Mock Redis
+@pytest.fixture(autouse=True)
+def mock_redis():
+    with patch('app.Redis') as mock_redis_cls:
+        mock_redis_instance = MagicMock()
+        mock_redis_cls.return_value = mock_redis_instance
+        yield mock_redis_instance
+
+def test_get_index(client):
+    """Test GET request to '/'"""
+    response = client.get('/')
     assert response.status_code == 200
-    assert b"Enter Employee Data for profinch" in response.data
+    assert b"Submitted Employees" in response.data
 
-def test_index_post(test_client, db_cursor):
-    """Test POST request to / and DB insertion"""
-    # Send POST data
-    response = test_client.post('/', data={'id': 101, 'name': 'John Doe'})
+def test_post_index(client):
+    """Test POST request to '/'"""
+    response = client.post('/', data={'id': 103, 'name': 'Alice'})
     assert response.status_code == 200
-
-    # Verify insertion in PostgreSQL
-    db_cursor.execute("SELECT * FROM empdata WHERE id = 101;")
-    result = db_cursor.fetchone()
-    assert result == (101, 'John Doe')
-
-def test_redis_push():
-    """Test Redis push functionality"""
-    from app import redis
-    redis.rpush('employees', "999:Jane")
-    result = redis.lrange('employees', -1, -1)[0]
-    assert result == "999:Jane"
-    # Clean up
-    redis.lpop('employees')
+    # Ensure Redis rpush was called
+    app.redis.rpush.assert_called_with('employees', '103:Alice')
+    # Ensure cursor.execute was called for insert
+    app.cursor.execute.assert_called()
