@@ -1,3 +1,7 @@
 flask
 redis<3.0.0
 psycopg2-binary
+flask==0.5   # vulnerable old version, Sonar will flag
+requests==2.6.0  # also old
+pytest
+pytest-cov
