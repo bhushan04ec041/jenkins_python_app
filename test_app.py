@@ -1,45 +1,46 @@
 # test_app.py
 import pytest
 from unittest.mock import patch, MagicMock
-from app import app
 
-@pytest.fixture
-def client():
-    app.config['TESTING'] = True
-    with app.test_client() as client:
-        yield client
+# Mock psycopg2 before importing app
+mock_conn = MagicMock()
+mock_cursor = MagicMock()
+# Predefined data for GET requests
+mock_cursor.fetchall.return_value = [(101, "John"), (102, "Alice")]
+mock_conn.cursor.return_value = mock_cursor
 
-# Mock PostgreSQL connection and cursor
-@pytest.fixture(autouse=True)
-def mock_postgres():
-    with patch('app.psycopg2.connect') as mock_connect:
-        mock_conn = MagicMock()
-        mock_cursor = MagicMock()
-        # Example: fake data returned from SELECT
-        mock_cursor.fetchall.return_value = [(101, "John Doe"), (102, "Jane Smith")]
-        mock_conn.cursor.return_value = mock_cursor
-        mock_connect.return_value = mock_conn
-        yield mock_connect
+with patch("psycopg2.connect", return_value=mock_conn):
+    from app import app  # import app after mocking
 
-# Mock Redis
-@pytest.fixture(autouse=True)
-def mock_redis():
-    with patch('app.Redis') as mock_redis_cls:
-        mock_redis_instance = MagicMock()
-        mock_redis_cls.return_value = mock_redis_instance
-        yield mock_redis_instance
+# Mock Redis to avoid connection issues
+mock_redis = MagicMock()
+with patch("app.redis", mock_redis):
 
-def test_get_index(client):
-    """Test GET request to '/'"""
-    response = client.get('/')
-    assert response.status_code == 200
-    assert b"Submitted Employees" in response.data
+    # Flask test client fixture
+    @pytest.fixture
+    def client():
+        with app.test_client() as client:
+            yield client
 
-def test_post_index(client):
-    """Test POST request to '/'"""
-    response = client.post('/', data={'id': 103, 'name': 'Alice'})
-    assert response.status_code == 200
-    # Ensure Redis rpush was called
-    app.redis.rpush.assert_called_with('employees', '103:Alice')
-    # Ensure cursor.execute was called for insert
-    app.cursor.execute.assert_called()
+    # Test GET request to '/'
+    def test_index_get(client):
+        """Test GET request returns 200 and page content"""
+        response = client.get("/")
+        assert response.status_code == 200
+        # Check that some text from the page is present
+        assert b"Submitted Employees" in response.data
+        # Check that mocked employees are displayed
+        assert b"John" in response.data
+        assert b"Alice" in response.data
+
+    # Test POST request to '/' with sample data
+    def test_index_post(client):
+        """Test POST request adds new employee"""
+        response = client.post("/", data={"id": 103, "name": "Bob"})
+        assert response.status_code == 200
+        # Check that POSTed employee appears in page
+        assert b"Bob" in response.data
+        # Verify Redis was called
+        mock_redis.rpush.assert_called_with('employees', '103:Bob')
+        # Verify SQL INSERT executed
+        mock_cursor.execute.assert_called()
