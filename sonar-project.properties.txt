@@ -1,0 +1,15 @@
+# Project identification
+sonar.projectKey=jenkins-python-app
+sonar.projectName=Jenkins Python Application
+sonar.projectVersion=1.0
+
+# Source code location
+sonar.sources=.
+sonar.language=py
+sonar.sourceEncoding=UTF-8
+
+# Python specific settings
+sonar.python.version=3
+
+# Exclusions (optional)
+sonar.exclusions=**/__pycache__/**,**/*.pyc
