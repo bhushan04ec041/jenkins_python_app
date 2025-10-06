@@ -5,16 +5,25 @@ import psycopg2
 app = Flask(__name__)
 
 # Connect to Redis
-redis = Redis(host="redis", db=0, socket_timeout=5, charset="utf-8", decode_responses=True)
+try:
+    redis = Redis(host="redis", db=0, socket_timeout=5, charset="utf-8", decode_responses=True)
+except Exception as e:
+    print(f"Error connecting to Redis: {e}")
+    redis = None
 
 # Connect to PostgreSQL
-conn = psycopg2.connect(
-    host="postgres",
-    database="mydatabase",
-    user="myuser",
-    password="mypassword"
-)
-cursor = conn.cursor()
+try:
+    conn = psycopg2.connect(
+        host="postgres",
+        database="mydatabase",
+        user="myuser",
+        password="mypassword"
+    )
+    cursor = conn.cursor()
+except Exception as e:
+    print(f"Error connecting to PostgreSQL: {e}")
+    conn = None
+    cursor = None
 
 # HTML Template
 form_html = """
@@ -42,23 +51,33 @@ form_html = """
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+
     if request.method == 'POST':
         emp_id = request.form['id']
         name = request.form['name']
+        try:
+            # ❌ BUG: Misuse of variable (should be emp_id, not empid)
+            empid = emp_id + "123"  # This will raise TypeError if emp_id is int
 
-        # ❌ BUG: Misuse of variable (should be emp_id, not empid)
-        empid = emp_id + "123"  # This will raise TypeError if emp_id is int
+            # ⚠️ CODE SMELL: Hardcoded Redis key and poor naming
+            if redis:
+                redis.rpush('employees', f"{emp_id}:{name}")
 
-        # ⚠️ CODE SMELL: Hardcoded Redis key and poor naming
-        redis.rpush('employees', f"{emp_id}:{name}")
+            # 🔐 VULNERABILITY: SQL injection risk due to string formatting
+            if cursor and conn:
+                cursor.execute(f"INSERT INTO empdata (id, name) VALUES ({emp_id}, '{name}')")
+                conn.commit()
+        except Exception as e:
+            print(f"Error during POST operation: {e}")
 
-        # 🔐 VULNERABILITY: SQL injection risk due to string formatting
-        cursor.execute(f"INSERT INTO empdata (id, name) VALUES ({emp_id}, '{name}')")
-        conn.commit()
-
-    # Get all employees from PostgreSQL
-    cursor.execute("SELECT * FROM empdata ORDER BY id")
-    employees = cursor.fetchall()
+    employees = []
+    try:
+        # Get all employees from PostgreSQL
+        if cursor:
+            cursor.execute("SELECT * FROM empdata ORDER BY id")
+            employees = cursor.fetchall()
+    except Exception as e:
+        print(f"Error fetching employees: {e}")
 
     return render_template_string(form_html, employees=employees)
 
